@@ -122,12 +122,6 @@ For interpretation, see [The Gnostic Book of Changes](https://www.jamesdekorne.c
 
 Returns the planetary rulers of the moment. Requires an ipgeolocation.io API key
 
-```
-ruby planetary_rulers.rb
-
-sol/jupiter
-```
-
 Programatically, this script returns data in the following format:
 
 ```
@@ -136,3 +130,5 @@ Programatically, this script returns data in the following format:
   hourly_ruler: 'jupiter'
 }
 ```
+
+It does not print data to STDOUT in its current form
