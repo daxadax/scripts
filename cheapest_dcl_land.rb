@@ -13,14 +13,33 @@ class CheapestDclLand
   end
 
   def call
-    for_sale = data.select { |_, details| details['type'] == 10 }
-    for_sale.sort_by { |(_, details)| details['price'] }.first(10).each do |x|
-      print "#{x.last['price']} MANA: #{x.first}\n"
+    for_sale = data.select { |_, details| details['type'] == 10 }.values
+
+    estates = for_sale.reject { |details| details['estate_id'].nil? }
+    parcels = for_sale - estates
+
+
+    print "\n"
+    print "#estates\n"
+    estates.group_by { |details| details['estate_id'] }.
+            sort_by { |id, parcels| parcels[0]['price'] / parcels.count.to_f.round }.
+            first(10).each do |id, parcels|
+              total_price = parcels[0]['price']
+              per_parcel = total_price / parcels.count.to_f.round
+              print "#{per_parcel} MANA per parcel: #{total_price} MANA, #{parcels.count} parcels, id: #{id}\n"
+            end
+
+    print "\n"
+    print "#parcels\n"
+    parcels.sort_by { |details| details['price'] }.first(10).each do |x|
+      print "#{x['price']} MANA: #{x['x']}, #{x['y']}\n"
     end
+
+    @data = nil
   end
 
   private
-  attr_reader :data
+  attr_accessor :data
 end
 
 CheapestDclLand.call
