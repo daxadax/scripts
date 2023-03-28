@@ -2,19 +2,20 @@
 
 # modified from https://gist.github.com/pbock/3ab260f3862c350e6b5f #
 
-require 'watir-webdriver'
+require 'selenium-webdriver'
+require 'pry'
 
 class BurgerBot
-
-  def initialize
+  def initialize(termin_type)
     @attempt_count = 0
     @date = Time.now.to_i
+    @url = determine_url(termin_type)
   end
 
   def run
     until appointment_available?
-    puts 'Sleeping.'
-    sleep 30
+      puts 'Sleeping.'
+      sleep 35
     end
   end
 
@@ -23,35 +24,60 @@ class BurgerBot
   def appointment_available?
     puts '-'*80
     puts "Beginning attempt ##{@attempt_count += 1}"
-    browser.goto url
+    browser.get @url
     puts 'Page loaded'
-    link = browser.element css: '.calendar-month-table:first-child td.buchbar a'
-    if link.exists? # only show links once?
-      link.click
-      notify 'An appointment is available.'
-      puts 'Enter y to keep searching or anything else to quit.'
-      return gets.chomp.downcase != 'y'
-    else
-      puts 'No luck this time.'
-      return false
-    end
+    link = browser.find_element(css: '.buchbar a')
+    link.click
+    notify 'An appointment is available.'
+    puts 'Enter y to keep searching or anything else to quit.'
+    return gets.chomp.downcase != 'y'
+  rescue Selenium::WebDriver::Error::NoSuchElementError => e
+    puts 'No luck this time.'
+    return false
   rescue StandardError => e
     puts 'Error encountered.'
     puts e.inspect
     return false
   end
 
+  def determine_url(termin_type)
+    case termin_type
+    when 'anmeldung' then anmeldung_url
+    when 'background_check' then background_check_url
+    when 'gewerbe' then gewerbe_registration_url
+    else
+      raise ArgumentError, "Unknown termin type: #{termin_type}"
+    end
+  end
+
   def browser
-    @browser ||= Watir::Browser.new :chrome
+    @browser ||= Selenium::WebDriver.for :chrome
   end
 
   def notify(message)
     puts message.upcase
-    system 'LANG=C xmessage -nearmouse "%s"' % message
+    `notify-send "#{message}"`
+    `spd-say -t male3 -p -23 -r -23 "I've found an appointment"`
     rescue StandardError => e
   end
 
-  def url
+  def background_check_url
+    'https://service.berlin.de/terminvereinbarung/termin/tag.php?'\
+    'termin=1&'\
+    'anliegen[]=120926&'\
+    'dienstleisterlist=122210,122217,122219,122227,122231,122238,122243,122254,331011,349977,122252,122260,122262,122271,122273,122277,122280,122282,122284,122291,122285,122286,122296,150230,122297,122294,122312,122314,122304,122311,122309,317869,122281,122279,122283,122276,122274,122267,122246,122251,122257,122208,122226&'\
+    'herkunft=http%3A%2F%2Fservice.berlin.de%2Fdienstleistung%2F120926%2F'
+  end
+
+  def gewerbe_registration_url
+    'https://service.berlin.de/terminvereinbarung/termin/tag.php?'\
+    'termin=1&'\
+    'anliegen[]=327835&'\
+    'dienstleisterlist=122210,122217,122219,122227,122231,122238,122243,122254,331011,349977,122252,122260,122262,122271,122273,122277,122280,122282,122284,122291,122285,122286,122296,324759,150230,122297,122294,122312,122314,122304,122311,122309,317869,122281,122279,122283,122276,122274,122267,122246,122251,122257,122208,122226&'\
+    'herkunft=http%3A%2F%2Fservice.berlin.de%2Fdienstleistung%2F327835%2F'
+  end
+
+  def anmeldung_url
     'https://service.berlin.de/terminvereinbarung/termin/tag.php'\
     '?id=&buergerID=&buergername=&absagecode='\
     "&Datum=#{@date}"\
@@ -101,7 +127,16 @@ class BurgerBot
     '&dienstleister%5B%5D=122208'\
     '&dienstleister%5B%5D=122226'
   end
-
 end
 
-BurgerBot.new.run
+print "Which kind of appointment do you need?\n\n1. Anmeldung\n2. Background Check\n3. Gerwerbe Registration\n"
+input = gets.chomp.to_i
+
+termin_type = case input
+              when 1 then 'anmeldung'
+              when 2 then 'background_check'
+              when 3 then 'gewerbe'
+              end
+
+`clear`
+BurgerBot.new(termin_type).run
