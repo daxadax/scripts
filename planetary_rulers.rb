@@ -9,6 +9,7 @@ class PlanetaryRulerships
   HOURS = %i[luna saturn jupiter mars sol venus mercury].freeze
   LOCATION = "Berlin, Germany".freeze
   TIMEZONE = Time.now.zone
+  SUN_DATA_JSON_PATH = '/tmp/todays_sun_data.json'
   # https://app.ipgeolocation.io/
   API_HOST = 'https://api.ipgeolocation.io/astronomy'
   API_KEY = ENV["IPGEOLOCATION_API_KEY"]
@@ -20,8 +21,20 @@ class PlanetaryRulerships
   def initialize(timestamps)
     @now = DateTime.now
 
+    if timestamps.empty? && File.exist?(SUN_DATA_JSON_PATH)
+      timestamps = build_timestamps_from_file
+    end
+
     if timestamps.empty? || now > timestamps[:next_sunrise]
       set_timestamps
+
+      File.open(SUN_DATA_JSON_PATH, 'w+') do |f|
+        f.write({
+          last_sunrise: @last_sunrise,
+          next_sunrise: @next_sunrise,
+          sunset: @sunset
+        }.to_json)
+      end
     else
       @last_sunrise = timestamps[:last_sunrise]
       @next_sunrise = timestamps[:next_sunrise]
@@ -30,7 +43,7 @@ class PlanetaryRulerships
   end
 
   def call
-    print "#{daily_ruler}/#{planetary_hour}\n"
+    # print "#{daily_ruler}/#{planetary_hour}\n"
 
     {
       daily_ruler: daily_ruler,
@@ -128,6 +141,20 @@ class PlanetaryRulerships
       @last_sunrise = build_local_timestamp(today['date'], today['sunrise'])
       @sunset = build_local_timestamp(today['date'], today['sunset'])
     end
+  end
+
+  def build_timestamps_from_file
+    data = JSON.parse(File.read(SUN_DATA_JSON_PATH))
+    result = {
+      last_sunrise: DateTime.parse(data['last_sunrise']),
+      next_sunrise: DateTime.parse(data['next_sunrise']),
+      sunset: DateTime.parse(data['sunset'])
+    }
+
+    return {} if result.values.any?(nil)
+    return {} unless result.values.any? { |x| x.is_a?(DateTime) }
+
+    result
   end
 
   def build_local_timestamp(date, time)
