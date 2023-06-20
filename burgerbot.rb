@@ -3,12 +3,15 @@
 # modified from https://gist.github.com/pbock/3ab260f3862c350e6b5f #
 
 require 'selenium-webdriver'
+require 'date'
 require 'pry'
 
 class BurgerBot
   def initialize(termin_type)
+    today = Date.today
+
     @attempt_count = 0
-    @date = Time.now.to_i
+    @date = Date.new(today.year, today.month, 1)
     @url = determine_url(termin_type)
   end
 
