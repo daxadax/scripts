@@ -175,4 +175,3 @@ class PlanetaryRulerships
 end
 
 PlanetaryRulerships.call
-
