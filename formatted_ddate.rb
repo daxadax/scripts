@@ -1,8 +1,6 @@
 #!/usr/bin/env ruby
 
 class FormattedDdate
-  require "#{ENV['HOME']}/programming/scripts/planetary_rulers.rb"
-
   def self.call
     new.call
   end
@@ -10,35 +8,19 @@ class FormattedDdate
   # TODO: test st tibs day output
   def initialize
     @ddate = `ddate +"%{%B %d%}"`
-    @planetary_rulers = PlanetaryRulerships.call
   end
 
   def call
-    print "#{formatted_date} #{rulerships}"
+    formatted_date
   end
 
   private
-  attr_reader :ddate, :planetary_rulers
+  attr_reader :ddate
 
   def formatted_date
     return ddate if st_tibs_day?
 
     "#{season_map[season]}/#{day}"
-  end
-
-  def rulerships
-    # uncomment for glyphs rather than text
-    # "#{glyph_map[daily_ruler]}/#{glyph_map[hourly_ruler]}"
-
-    "#{daily_ruler}/#{hourly_ruler}"
-  end
-
-  def daily_ruler
-    planetary_rulers[:daily_ruler].to_s.capitalize
-  end
-
-  def hourly_ruler
-    planetary_rulers[:hourly_ruler].to_s.capitalize
   end
 
   def day
@@ -62,18 +44,4 @@ class FormattedDdate
       'The Aftermath' => 5,
     }
   end
-
-  def glyph_map
-    {
-      'Jupiter' => '♃',
-      'Luna' => '☽',
-      'Mars' => '♂',
-      'Mercury' => '☿',
-      'Saturn' => '♄',
-      'Sol' => '☼',
-      'Venus' => '♀'
-    }
-  end
 end
-
-FormattedDdate.call
