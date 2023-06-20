@@ -1,0 +1,25 @@
+source ~/.screenrc
+
+# help from: stackoverflow.com/a/23945515/2128691
+
+# start game server
+screen -t 'wildcraft-backend-server' 0
+stuff "cd ~/programming/wildcraft/server"
+stuff "rerun 'rackup'"
+
+# start ngrok
+screen -t 'ngrok' 1
+stuff "ngrok http 9292"
+
+# start dcl server
+screen -t 'village-gameserver' 2
+stuff "cd ~/programming/wildcraft/village"
+stuff "dcl start -db --web3"
+
+# open game server
+screen -t 'village code' 3
+stuff "cd ~/programming/wildcraft/village"
+
+# open server backend
+screen -t 'backend code' 3
+stuff "cd ~/programming/wildcraft/server"
