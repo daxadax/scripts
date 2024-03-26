@@ -145,6 +145,8 @@ class PlanetaryRulerships
 
   def build_timestamps_from_file
     data = JSON.parse(File.read(SUN_DATA_JSON_PATH))
+    return {} if data.empty?
+
     result = {
       last_sunrise: DateTime.parse(data['last_sunrise']),
       next_sunrise: DateTime.parse(data['next_sunrise']),

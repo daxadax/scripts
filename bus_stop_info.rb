@@ -8,6 +8,7 @@ class BusStopInfo
     result = `curl -s 'https://v6.bvg.transport.rest/locations?query=#{location}&results=1'`
     data = JSON.parse(result)[0]
 
+    return [] if data.nil?
     new(data['id'], data['name'], line).call
   end
 
@@ -42,15 +43,18 @@ class BusStopInfo
       next if line && trip['line']['name'].downcase != line.downcase
       next if trip['direction'] == 'Fahrt endet hier'
 
-      arrivingAt = trip['when'] || trip['plannedWhen']
-      next unless arrivingAt
+      arrival = trip['when'] || trip['plannedWhen']
+      next unless arrival
 
-      arrival = (DateTime.parse(arrivingAt).to_time - Time.now) / 60
-      next if arrival.negative?
+      arrives_at = DateTime.parse(arrival).to_time
+      arrival_min = (arrives_at - Time.now) / 60
+      next if arrival_min.negative?
 
 
       {
-        arrives_in: arrival.round,
+        arrives_in: arrival_min.round,
+        arrives_at: arrives_at.to_s,
+        arrives_at_int: arrives_at.to_i,
         mode: trip['line']['mode'],
         name: trip['line']['name'],
         direction: trip['direction'],
