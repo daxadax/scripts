@@ -80,7 +80,7 @@ module Backblaze
         if response.success?
           # clean up initial files / DB if desired
 
-          { success: true }
+          { success: true, msg: "File #{filename}.csv uploaded successfully" }
         else
           { success: false, msg: "Failed to upload #{tarfile}: #{response.body}" }
         end
@@ -89,5 +89,8 @@ module Backblaze
         FileUtils.rm(tarfile)
       end
     end
+
+    private
+    attr_reader :filename, :bucket, :year, :author
   end
 end

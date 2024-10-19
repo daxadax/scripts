@@ -36,7 +36,7 @@ module Backblaze
       return response unless response.success?
 
       auth = JSON.parse(response.body)
-      download_url = "#{auth['downloadUrl']}/file/#{@bucket}/#{@filename}"
+      download_url = "#{auth['downloadUrl']}/file/#{bucket}/#{filename}"
 
       Faraday.get(download_url) do |request|
         request.headers['Authorization'] = auth['authorizationToken']
@@ -44,9 +44,10 @@ module Backblaze
     end
 
     private
+    attr_reader :bucket, :filename
 
     def valid_bucket?
-      KNOWN_B2_BUCKETS.include?(@bucket)
+      KNOWN_B2_BUCKETS.include?(bucket)
     end
   end
 end
