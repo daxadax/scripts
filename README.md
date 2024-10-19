@@ -58,13 +58,12 @@ Fetching data...
 
 ### formatted_ddate.rb
 
-Returns the current discordian season and date along with planetary rulers of the moment.
-Requires the `planetary_rulers.rb` script
+Returns the current discordian season and date
 
 ```
 ruby formatted_ddate.rb
 
-4/42 Sol/Jupiter
+4/42
 ```
 
 ### housekeeping_analyzer.rb
