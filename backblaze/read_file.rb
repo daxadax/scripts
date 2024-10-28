@@ -1,7 +1,7 @@
 # To be used with backblaze service
 #
 # the follow ENV variables are required to be set:
-# KNOWN_B2_BUCKETS - array of accepted bucket names
+# B2_KNOWN_BUCKETS - array of accepted bucket names
 # B2_AUTH_URL
 # B2_PUBLIC_KEY
 # B2_PRIVATE_KEY
@@ -10,7 +10,7 @@ module Backblaze
   class ReadFile
     AuthenticationError = Class.new(::StandardError)
 
-    KNOWN_B2_BUCKETS = ENV['KNOWN_B2_BUCKETS']
+    B2_KNOWN_BUCKETS = ENV['B2_KNOWN_BUCKETS']
     B2_AUTH_URL = ENV['B2_AUTH_URL']
     B2_PUBLIC_KEY = ENV['B2_PUBLIC_KEY']
     B2_PRIVATE_KEY = ENV['B2_PRIVATE_KEY']
@@ -47,7 +47,7 @@ module Backblaze
     attr_reader :bucket, :filename
 
     def valid_bucket?
-      KNOWN_B2_BUCKETS.include?(bucket)
+      B2_KNOWN_BUCKETS.include?(bucket)
     end
   end
 end
