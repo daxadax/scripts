@@ -15,13 +15,14 @@ module Backblaze
     B2_PUBLIC_KEY = ENV['B2_PUBLIC_KEY']
     B2_PRIVATE_KEY = ENV['B2_PRIVATE_KEY']
 
-    def self.call(bucket:, filename:)
-      new(bucket, filename).call
+    def self.call(bucket:, filename:, target_path: nil)
+      new(bucket, filename, target_path).call
     end
 
-    def initialize(bucket, filename)
+    def initialize(bucket, filename, target_path)
       @bucket = bucket
       @filename = filename
+      @target_path = target_path
     end
 
     def call
@@ -38,13 +39,25 @@ module Backblaze
       auth = JSON.parse(response.body)
       download_url = "#{auth['downloadUrl']}/file/#{bucket}/#{filename}"
 
-      Faraday.get(download_url) do |request|
+      download = Faraday.get(download_url) do |request|
         request.headers['Authorization'] = auth['authorizationToken']
+      end
+
+      # write file to tmp file
+      file = Tempfile.new("tempfile-#{Time.now.utc.to_i}")
+      file.write(download.body)
+      file.rewind
+
+      # unpack tarball
+      if target_path
+        system("tar -xf #{file.path} -O > #{target_path}")
+      else # write to STDOUT
+        system("tar -xf #{file.path} -O")
       end
     end
 
     private
-    attr_reader :bucket, :filename
+    attr_reader :bucket, :filename, :target_path
 
     def valid_bucket?
       B2_KNOWN_BUCKETS.include?(bucket)
