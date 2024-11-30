@@ -58,8 +58,8 @@ class QontoParser
     FileUtils.rm(manifest_csv_path)
 
     puts 'Determining name schema..'
-    # don't take the first entry, sometimes it's not correctly formatted
-    date = Dir["#{@expense_dir}/*"][1].delete(@expense_dir).split.first.sub('-','')
+    # NOTE don't take the first (few) entries, sometimes not correctly formatted
+    date = Dir["#{@expense_dir}/*"][3].delete(@expense_dir).split.first.sub('-','')
     name = Date.parse(date).strftime('%Y-%B')
 
     puts 'Zipping together created files..'
