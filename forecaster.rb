@@ -69,22 +69,19 @@ class Forecaster
   end
 
   def build_historic_structure(forecast)
-    data = forecast['data'].map do |day|
-      date = Time.at(day['dt']).to_date.to_s
+    data = forecast['data'][0]
+    date = Time.at(data['dt']).to_date.to_s
 
-      {
-        date: date,
-        sunrise: Time.at(day['sunrise']).strftime("%H:%M"),
-        sunset: Time.at(day['sunset']).strftime("%H:%M"),
-        moon_phase: MoonPhaseForDate.call(date: date),
-        uvi: day['uvi'],
-        uv_risk: risk_from_uv(day['uvi']),
-        temp: day['temp'],
-        desc: day['weather'][0]['description']
-      }
-    end
-
-    OpenStruct.new(daily: data)
+    {
+      date: date,
+      sunrise: Time.at(data['sunrise']).strftime("%H:%M"),
+      sunset: Time.at(data['sunset']).strftime("%H:%M"),
+      moon_phase: MoonPhaseForDate.call(date: date),
+      uvi: data['uvi'],
+      uv_risk: risk_from_uv(data['uvi']),
+      temp: data['temp'],
+      desc: data['weather'][0]['description']
+    }
   end
 
   def quantify_air_quality(aqi)
