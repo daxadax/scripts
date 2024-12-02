@@ -1,12 +1,14 @@
 #!/usr/bin/env ruby
 
 require "#{ENV['HOME']}/programming/scripts/moon_info.rb"
+require "#{ENV['HOME']}/programming/scripts/moon_phase_for_date.rb"
 require 'json'
 require 'date'
 
 class Forecaster
   BASE_URL = 'https://api.openweathermap.org/data'
   ONECALL_URL = "#{BASE_URL}/3.0/onecall"
+  ONECALL_HISTORIC_URL = "#{BASE_URL}/3.0/onecall/timemachine"
   AIR_QUALITY_URL = "#{BASE_URL}/2.5/air_pollution"
   API_KEY = ENV['OPENWEATHER_API_KEY']
 
@@ -14,19 +16,31 @@ class Forecaster
     new(latitude, longitude).call
   end
 
-  def initialize(latitude, longitude)
+  def self.historic(latitude, longitude, timestamp)
+    new(latitude, longitude, timestamp).call_historic
+  end
+
+  def initialize(latitude, longitude, timestamp = nil)
     @latitude = latitude
     @longitude = longitude
-    @forecast = fetch_forecast
-    @air_quality = fetch_air_quality
+    @timestamp = timestamp
+    @air_quality = fetch_air_quality #TODO: also problem for historic
   end
 
   def call
+    @forecast = fetch_forecast(ONECALL_URL)
+
     build_structure(@forecast, @air_quality)
   end
 
+  def call_historic
+    @forecast = fetch_forecast(ONECALL_HISTORIC_URL)
+
+    build_historic_structure(@forecast)
+  end
+
   private
-  attr_reader :latitude, :longitude
+  attr_reader :latitude, :longitude, :timestamp
 
   def build_structure(forecast, air_quality)
     current = {
@@ -52,6 +66,25 @@ class Forecaster
     end
 
     OpenStruct.new(current: current, daily: daily)
+  end
+
+  def build_historic_structure(forecast)
+    data = forecast['data'].map do |day|
+      date = Time.at(day['dt']).to_date.to_s
+
+      {
+        date: date,
+        sunrise: Time.at(day['sunrise']).strftime("%H:%M"),
+        sunset: Time.at(day['sunset']).strftime("%H:%M"),
+        moon_phase: MoonPhaseForDate.call(date: date),
+        uvi: day['uvi'],
+        uv_risk: risk_from_uv(day['uvi']),
+        temp: day['temp'],
+        desc: day['weather'][0]['description']
+      }
+    end
+
+    OpenStruct.new(daily: data)
   end
 
   def quantify_air_quality(aqi)
@@ -86,10 +119,11 @@ class Forecaster
     JSON.parse(`curl -s '#{url}'`)
   end
 
-  def fetch_forecast
-    url = ONECALL_URL
+  def fetch_forecast(url)
+    url = url
     url += "?lat=#{latitude}"
     url += "&lon=#{longitude}"
+    url += "&dt=#{timestamp}" if timestamp
     url += "&appid=#{API_KEY}"
     url += "&units=metric"
     url += "&exclude=minutely,hourly"
