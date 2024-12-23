@@ -6,6 +6,9 @@
 # B2_PUBLIC_KEY
 # B2_PRIVATE_KEY
 
+# NOTE: currently only used for writing csv files so that assumption is made
+# throughout the code. would need to be rewritten if that changes, or duplicated
+# and rewritten for specific filetypes
 module Backblaze
   class WriteFile
     AuthenticationError = Class.new(::StandardError)
@@ -15,29 +18,32 @@ module Backblaze
     B2_PUBLIC_KEY = ENV['B2_PUBLIC_KEY']
     B2_PRIVATE_KEY = ENV['B2_PRIVATE_KEY']
 
-    def self.call(filename:, bucket:, year:, author:)
-      new(filename, bucket, year, author).call
+    def self.call(filename:, bucket:, year:, author:, compress: true)
+      new(filename, bucket, year, author, compress).call
     end
 
-    def initialize(filename, bucket, year, author)
+    def initialize(filename, bucket, year, author, compress)
       @filename = filename
       @bucket = bucket
       @year = year
       @author = author
+      @compress = compress
     end
 
     def call
-      raise AuthenticationError, "Unknown bucket: #{bucket}" unless B2_KNOWN_BUCKETS.include?(bucket)
+      raise AuthenticationError, "Unknown bucket: #{bucket}" unless valid_bucket?
 
-      bucket_id = ENV["B2_#{bucket.upcase}_BUCKET_ID"]
+      bucket_id = ENV["B2_#{bucket.upcase.split('-').join('_')}_BUCKET_ID"]
       csv_dumpfile = "#{filename}.csv"
-      tarfile = "#{filename.split('/').last}.tar.gz"
+
+      # use tarfile name if set to compress otherwise use existing csv filename
+      tarfile = compress? ? "#{filename.split('/').last}.tar.gz" : csv_dumpfile
 
       begin
         # compress csv file
         # test.csv    => 387  MB
         # test.tar.gz => 90   MB
-        system("tar -czvf #{tarfile} #{csv_dumpfile}")
+        system("tar -czvf #{tarfile} #{csv_dumpfile}") if compress?
 
         # move tar file to b2
         conn = Faraday.new(B2_AUTH_URL) do |conn|
@@ -66,12 +72,13 @@ module Backblaze
         end
 
         # include year as directory for sorting purposes
-        file_to_upload = "#{year}/#{tarfile}"
+        upload_filename = compress? ? tarfile : csv_dumpfile.split('/').last
+        file_to_upload = "#{year}/#{upload_filename}"
 
         response = Faraday.post(upload_data['uploadUrl']) do |request|
           request.headers['Authorization'] = upload_data['authorizationToken']
           request.headers['X-Bz-File-Name'] = file_to_upload
-          request.headers['Content-Type'] = 'application/gzip'
+          request.headers['Content-Type'] = content_type
           request.headers['X-Bz-Content-Sha1'] = sha1.hexdigest
           request.headers['X-Bz-Info-Author'] = author
           request.body = File.read(tarfile)
@@ -86,11 +93,25 @@ module Backblaze
         end
       ensure
         # remove generated tarfile
-        FileUtils.rm(tarfile)
+        FileUtils.rm(tarfile) if compress?
       end
     end
 
     private
     attr_reader :filename, :bucket, :year, :author
+
+    def valid_bucket?
+      B2_KNOWN_BUCKETS.include?(bucket)
+    end
+
+    def compress?
+      @compress
+    end
+
+    def content_type
+      return 'application/gzip' if compress?
+
+      'application/csv'
+    end
   end
 end
