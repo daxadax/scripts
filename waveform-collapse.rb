@@ -92,8 +92,8 @@ def print_grid(data)
   system "clear"
 
   data.each do |row|
-    puts row.inspect
-    # puts row.map { |x| next if x.nil?; color_text(*LAND_TYPE_MAP[x]) }.join(' | ')
+    # puts row.inspect
+    puts row.map { |x| next if x.nil?; color_text(*LAND_TYPE_MAP[x]) }.join(' | ')
   end
 end
 
