@@ -1,2 +1,5 @@
 PCB/gdrive_credentials.json
 PCB/orders.csv
+package.json
+package-lock.json
+node_modules/
