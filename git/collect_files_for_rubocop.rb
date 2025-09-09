@@ -1,3 +1,5 @@
+require 'pry'
+
 class CollectFilesForRubocop
   def self.call
     new.call
@@ -5,7 +7,9 @@ class CollectFilesForRubocop
 
   def initialize
     @active_changes = `git status --short`
-    @changed_files = `git diff --summary master..HEAD | uniq`
+
+    main_branch = `git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'`
+    @changed_files = `git diff --name-status #{main_branch}`
   end
 
   def call
@@ -19,13 +23,14 @@ class CollectFilesForRubocop
   private
   attr_reader :active_changes, :changed_files
 
-  # format: 'delete xxx xxx filename'
+  # format: 'M filename'
+  # format: 'D filename'
   def parse_changed_files
     changed_files.split("\n").map do |diff_row|
       columns = diff_row.strip.split
-      action = columns.first
 
-      next if action == 'delete'
+      # don't check deleted files
+      next if columns.first == 'D'
 
       columns.last # filename
     end.compact
