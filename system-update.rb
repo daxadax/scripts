@@ -30,9 +30,10 @@
 #   - MEGAcmd installed and configured (for cloud sync)
 #   - Ruby 3.x with standard libraries
 
-require 'open3'
-require 'json'
+require 'date'
 require 'fileutils'
+require 'json'
+require 'open3'
 require 'optparse'
 require 'timeout'
 
@@ -64,6 +65,9 @@ class SystemUpdate
     else
       puts "No updates performed, skipping analysis"
     end
+
+    # Handle orphan packages (optional)
+    handle_orphans
 
     puts "Starting cache cleanup..."
     return false unless cleanup_cache
@@ -165,8 +169,7 @@ class SystemUpdate
 
     commands = [
       { cmd: 'sudo pacman -S --noconfirm archlinux-keyring', interactive: false },
-      { cmd: 'sudo pacman -Syu', interactive: true },
-      { cmd: 'sudo pacman -Rsunc $(pacman -Qdtq)', interactive: true }
+      { cmd: 'sudo pacman -Syu', interactive: true }
     ]
 
     commands.each do |command|
@@ -197,6 +200,23 @@ class SystemUpdate
     end
 
     :updated
+  end
+
+  def handle_orphans
+    stdout, _stderr, status = Open3.capture3('pacman -Qdtq')
+    if status.success? && !stdout.strip.empty?
+      puts "\nOrphaned packages detected:"
+      puts stdout.lines.map { |l| "  - #{l.strip}" }
+      print "\nRemove orphaned packages now? [y/N]: "
+      answer = STDIN.gets.to_s.strip.downcase
+      if answer == 'y' || answer == 'yes'
+        system('sudo pacman -Rsunc $(pacman -Qdtq)')
+      else
+        puts "Skipping orphan removal. You can run: sudo pacman -Rsunc $(pacman -Qdtq)"
+      end
+    else
+      puts "No orphaned packages to remove."
+    end
   end
 
   def analyze_updates
@@ -421,7 +441,7 @@ class SystemUpdate
 
     # Determine if sync is needed
     needs_sync = if last_sync_time && item_mtime
-                   item_mtime > Time.parse(last_sync_time)
+                   item_mtime > DateTime.parse(last_sync_time).to_time
                  else
                    true # First time sync
                  end
