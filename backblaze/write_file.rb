@@ -18,32 +18,33 @@ module Backblaze
     B2_PUBLIC_KEY = ENV['B2_PUBLIC_KEY']
     B2_PRIVATE_KEY = ENV['B2_PRIVATE_KEY']
 
-    def self.call(filename:, bucket:, year:, author:, compress: true)
-      new(filename, bucket, year, author, compress).call
+    def self.call(filename:, bucket:, year:, author:, compress: true, extension: 'csv')
+      new(filename, bucket, year, author, compress, extension).call
     end
 
-    def initialize(filename, bucket, year, author, compress)
+    def initialize(filename, bucket, year, author, compress, extension)
       @filename = filename
       @bucket = bucket
       @year = year
       @author = author
       @compress = compress
+      @extension = extension
     end
 
     def call
       raise AuthenticationError, "Unknown bucket: #{bucket}" unless valid_bucket?
 
-      bucket_id = ENV["B2_#{bucket.upcase.split('-').join('_')}_BUCKET_ID"]
-      csv_dumpfile = "#{filename}.csv"
+      bucket_id = ENV[bucket_id_env_key]
+      dumpfile = "#{filename}.#{extension}"
 
-      # use tarfile name if set to compress otherwise use existing csv filename
-      tarfile = compress? ? "#{filename.split('/').last}.tar.gz" : csv_dumpfile
+      # use tarfile name if set to compress otherwise use existing dump filename
+      tarfile = compress? ? "#{filename.split('/').last}.tar.gz" : dumpfile
 
       begin
         # compress csv file
         # test.csv    => 387  MB
         # test.tar.gz => 90   MB
-        system("tar -czvf #{tarfile} #{csv_dumpfile}") if compress?
+        system("tar -czvf #{tarfile} #{dumpfile}") if compress?
 
         # move tar file to b2
         conn = Faraday.new(B2_AUTH_URL) do |conn|
@@ -72,7 +73,7 @@ module Backblaze
         end
 
         # include year as directory for sorting purposes
-        upload_filename = compress? ? tarfile : csv_dumpfile.split('/').last
+        upload_filename = compress? ? tarfile : dumpfile.split('/').last
         file_to_upload = "#{year}/#{upload_filename}"
 
         response = Faraday.post(upload_data['uploadUrl']) do |request|
@@ -87,7 +88,7 @@ module Backblaze
         if response.success?
           # clean up initial files / DB if desired
 
-          { success: true, msg: "File #{filename}.csv uploaded successfully" }
+          { success: true, msg: "File #{dumpfile.split('/').last} uploaded successfully" }
         else
           { success: false, msg: "Failed to upload #{tarfile}: #{response.body}" }
         end
@@ -98,10 +99,16 @@ module Backblaze
     end
 
     private
-    attr_reader :filename, :bucket, :year, :author
+    attr_reader :filename, :bucket, :year, :author, :extension
 
     def valid_bucket?
       B2_KNOWN_BUCKETS.include?(bucket)
+    end
+
+    def bucket_id_env_key
+      return 'B2_TEBI_BUCKET_ID' if bucket == 'tebi-reports'
+
+      "B2_#{bucket.upcase.split('-').join('_')}_BUCKET_ID"
     end
 
     def compress?
@@ -110,6 +117,7 @@ module Backblaze
 
     def content_type
       return 'application/gzip' if compress?
+      return 'application/json' if extension == 'json'
 
       'application/csv'
     end
