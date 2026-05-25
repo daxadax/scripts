@@ -6,9 +6,6 @@
 # B2_PUBLIC_KEY
 # B2_PRIVATE_KEY
 
-# NOTE: currently only used for writing csv files so that assumption is made
-# throughout the code. would need to be rewritten if that changes, or duplicated
-# and rewritten for specific filetypes
 module Backblaze
   class WriteFile
     AuthenticationError = Class.new(::StandardError)
@@ -87,7 +84,6 @@ module Backblaze
 
         if response.success?
           # clean up initial files / DB if desired
-
           { success: true, msg: "File #{dumpfile.split('/').last} uploaded successfully" }
         else
           { success: false, msg: "Failed to upload #{tarfile}: #{response.body}" }
@@ -106,8 +102,6 @@ module Backblaze
     end
 
     def bucket_id_env_key
-      return 'B2_TEBI_BUCKET_ID' if bucket == 'tebi-reports'
-
       "B2_#{bucket.upcase.split('-').join('_')}_BUCKET_ID"
     end
 
