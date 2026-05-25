@@ -73,7 +73,16 @@ module Backblaze
         upload_filename = compress? ? tarfile : dumpfile.split('/').last
         file_to_upload = "#{year}/#{upload_filename}"
 
-        response = Faraday.post(upload_data['uploadUrl']) do |request|
+        conn = Faraday.new do |f|
+          f.request :retry, {
+            max: 5,
+            interval: 0.3,
+            interval_randomness: 0.5,
+            retry_statuses: [503]
+          }
+        end
+
+        response = conn.post(upload_data['uploadUrl']) do |request|
           request.headers['Authorization'] = upload_data['authorizationToken']
           request.headers['X-Bz-File-Name'] = file_to_upload
           request.headers['Content-Type'] = content_type
