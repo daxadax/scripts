@@ -6,9 +6,6 @@
 # B2_PUBLIC_KEY
 # B2_PRIVATE_KEY
 
-# NOTE: currently only used for writing csv files so that assumption is made
-# throughout the code. would need to be rewritten if that changes, or duplicated
-# and rewritten for specific filetypes
 module Backblaze
   class WriteFile
     AuthenticationError = Class.new(::StandardError)
@@ -76,7 +73,16 @@ module Backblaze
         upload_filename = compress? ? tarfile : dumpfile.split('/').last
         file_to_upload = "#{year}/#{upload_filename}"
 
-        response = Faraday.post(upload_data['uploadUrl']) do |request|
+        conn = Faraday.new do |f|
+          f.request :retry, {
+            max: 5,
+            interval: 0.3,
+            interval_randomness: 0.5,
+            retry_statuses: [503]
+          }
+        end
+
+        response = conn.post(upload_data['uploadUrl']) do |request|
           request.headers['Authorization'] = upload_data['authorizationToken']
           request.headers['X-Bz-File-Name'] = file_to_upload
           request.headers['Content-Type'] = content_type
@@ -87,7 +93,6 @@ module Backblaze
 
         if response.success?
           # clean up initial files / DB if desired
-
           { success: true, msg: "File #{dumpfile.split('/').last} uploaded successfully" }
         else
           { success: false, msg: "Failed to upload #{tarfile}: #{response.body}" }
@@ -106,8 +111,6 @@ module Backblaze
     end
 
     def bucket_id_env_key
-      return 'B2_TEBI_BUCKET_ID' if bucket == 'tebi-reports'
-
       "B2_#{bucket.upcase.split('-').join('_')}_BUCKET_ID"
     end
 
