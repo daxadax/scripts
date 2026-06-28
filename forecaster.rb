@@ -5,6 +5,15 @@ require "#{ENV['HOME']}/programming/scripts/moon_phase_for_date.rb"
 require 'json'
 require 'date'
 
+class Forecast
+  attr_reader :current, :daily
+
+  def initialize(current:, daily:)
+    @current = current
+    @daily = daily
+  end
+end
+
 class Forecaster
   BASE_URL = 'https://api.openweathermap.org/data'
   ONECALL_URL = "#{BASE_URL}/3.0/onecall"
@@ -65,7 +74,7 @@ class Forecaster
       }
     end
 
-    OpenStruct.new(current: current, daily: daily)
+    Forecast.new(current: current, daily: daily)
   end
 
   def build_historic_structure(forecast)
