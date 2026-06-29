@@ -1,0 +1,13 @@
+# lives at /etc/systemd/system/iwd-monitor.timer
+
+[Unit]
+Description=Periodic Wi-Fi connectivity check
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1m
+Persistent=true
+Unit=iwd-monitor.service
+
+[Install]
+WantedBy=timers.target

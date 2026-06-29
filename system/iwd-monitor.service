@@ -1,0 +1,9 @@
+# lives at /etc/systemd/system/iwd-monitor.service
+
+[Unit]
+Description=Monitor Wi-Fi connectivity and restart iwd if disconnected
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/iwd-monitor
+
