@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require "#{ENV['HOME']}/programming/scripts/moon_info.rb"
-require "#{ENV['HOME']}/programming/scripts/moon_phase_for_date.rb"
 require 'json'
 require 'date'
 
@@ -85,7 +84,7 @@ class Forecaster
       date: date,
       sunrise: Time.at(data['sunrise']).strftime("%H:%M"),
       sunset: Time.at(data['sunset']).strftime("%H:%M"),
-      moon_phase: MoonPhaseForDate.call(date: date),
+      moon_phase: MoonInfo.new(MoonInfo.cycle_completion_for(date)).phase_name,
       uvi: data['uvi'],
       uv_risk: risk_from_uv(data['uvi']),
       temp: data['temp'],

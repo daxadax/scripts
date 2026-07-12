@@ -1,7 +1,19 @@
+require 'date'
+
 # This service is built for the 'moonPhase' variable in the DarkSky API
 # where a 'new' moon is 0 (0.99, 0, and 0.01)
 # and a 'full' moon is 0.5 (0.49 - 0.51)
 class MoonInfo
+  SYNODIC_MONTH = 29.530588853
+  REFERENCE_NEW_MOON = Time.utc(2000, 1, 6, 18, 14, 0)
+
+  def self.cycle_completion_for(date)
+    date = Date.parse(date.to_s)
+    noon = Time.utc(date.year, date.month, date.day, 12, 0, 0)
+    days = (noon - REFERENCE_NEW_MOON) / 86_400.0
+    (days % SYNODIC_MONTH) / SYNODIC_MONTH
+  end
+
   def initialize(cycle_completion)
     @cycle_completion = cycle_completion
   end
