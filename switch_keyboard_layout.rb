@@ -1,3 +1,7 @@
+# used in ~/.config/i3/config
+# bindsym --release $mod+$super+Ctrl+space exec ruby ~/programming/scripts/switch_keyboard_layout.rb
+
+
 current_engine = `ibus engine`.strip
 toggle_engine = current_engine == 'hangul' ? 'xkb:us::eng' : 'hangul'
 
