@@ -7,14 +7,14 @@
 #
 # Usage:
 #   export NOTIFICATION_BOT_URL='https://your-app.herokuapp.com/notify'
-#   ruby upload_and_notify.rb ~/clip.mkv --bucket notifications --target-id YOUR_CHAT_ID --text "clip"
+#   ruby upload_media_and_send_to_chat.rb ~/clip.mkv --bucket notifications --target-id YOUR_CHAT_ID --text "clip"
 
 require 'json'
 require 'net/http'
 require 'optparse'
 require 'uri'
 
-require "#{ENV['HOME']}/programming/scripts/backblaze/upload_media"
+require File.expand_path('../backblaze/upload_media', __dir__)
 
 VIDEO_EXTENSIONS = %w[.mkv .mp4 .webm .mov].freeze
 
@@ -30,7 +30,7 @@ options = {
 }
 
 parser = OptionParser.new do |opts|
-  opts.banner = 'Usage: upload_and_notify.rb FILE --bucket BUCKET --target-id ID [options]'
+  opts.banner = 'Usage: upload_media_and_send_to_chat.rb FILE --bucket BUCKET --target-id ID [options]'
   opts.on('--bucket BUCKET', 'B2 bucket name') { |value| options[:bucket] = value }
   opts.on('--key KEY', 'Object key in bucket') { |value| options[:key] = value }
   opts.on('--target-id ID', 'Telegram chat id') { |value| options[:target_id] = value }
