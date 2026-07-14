@@ -6,31 +6,28 @@
 # B2_PUBLIC_KEY
 # B2_PRIVATE_KEY
 
+require_relative 'credentials'
+
 module Backblaze
   class ReadFile
     AuthenticationError = Class.new(::StandardError)
 
-    B2_KNOWN_BUCKETS = ENV['B2_KNOWN_BUCKETS']
-    B2_AUTH_URL = ENV['B2_AUTH_URL']
-    B2_PUBLIC_KEY = ENV['B2_PUBLIC_KEY']
-    B2_PRIVATE_KEY = ENV['B2_PRIVATE_KEY']
-
-    def self.call(bucket:, filename:, target_path: nil)
-      new(bucket, filename, target_path).call
+    def self.call(bucket:, filename:, target_path: nil, public_key: nil, private_key: nil)
+      new(bucket, filename, target_path, public_key:, private_key:).call
     end
 
-    def initialize(bucket, filename, target_path)
+    def initialize(bucket, filename, target_path, public_key: nil, private_key: nil)
       @bucket = bucket
       @filename = filename
       @target_path = target_path
+      @credentials = Credentials.fetch(public_key:, private_key:)
     end
 
     def call
       raise AuthenticationError, "Unknown bucket: #{bucket}" unless valid_bucket?
 
-      # create connection for reading
-      conn = Faraday.new(B2_AUTH_URL) do |conn|
-        conn.request :authorization, :basic, B2_PUBLIC_KEY, B2_PRIVATE_KEY
+      conn = Faraday.new(auth_url) do |conn|
+        conn.request :authorization, :basic, credentials[:public_key], credentials[:private_key]
       end
 
       response = conn.get
@@ -43,24 +40,31 @@ module Backblaze
         request.headers['Authorization'] = auth['authorizationToken']
       end
 
-      # write file to tmp file
       file = Tempfile.new("tempfile-#{Time.now.utc.to_i}")
       file.write(download.body)
       file.rewind
 
-      # unpack tarball
       if target_path
         system("tar -xf #{file.path} -O > #{target_path}")
-      else # write to STDOUT
+      else
         system("tar -xf #{file.path} -O")
       end
     end
 
     private
-    attr_reader :bucket, :filename, :target_path
+
+    attr_reader :bucket, :filename, :target_path, :credentials
+
+    def auth_url
+      ENV.fetch('B2_AUTH_URL')
+    end
+
+    def known_buckets
+      ENV.fetch('B2_KNOWN_BUCKETS').split(',').map(&:strip)
+    end
 
     def valid_bucket?
-      B2_KNOWN_BUCKETS.include?(bucket)
+      known_buckets.include?(bucket)
     end
   end
 end

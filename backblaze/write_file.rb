@@ -6,26 +6,24 @@
 # B2_PUBLIC_KEY
 # B2_PRIVATE_KEY
 
+require_relative 'credentials'
+
 module Backblaze
   class WriteFile
     AuthenticationError = Class.new(::StandardError)
 
-    B2_KNOWN_BUCKETS = ENV['B2_KNOWN_BUCKETS']
-    B2_AUTH_URL = ENV['B2_AUTH_URL']
-    B2_PUBLIC_KEY = ENV['B2_PUBLIC_KEY']
-    B2_PRIVATE_KEY = ENV['B2_PRIVATE_KEY']
-
-    def self.call(filename:, bucket:, year:, author:, compress: true, extension: 'csv')
-      new(filename, bucket, year, author, compress, extension).call
+    def self.call(filename:, bucket:, year:, author:, compress: true, extension: 'csv', public_key: nil, private_key: nil)
+      new(filename, bucket, year, author, compress, extension, public_key:, private_key:).call
     end
 
-    def initialize(filename, bucket, year, author, compress, extension)
+    def initialize(filename, bucket, year, author, compress, extension, public_key: nil, private_key: nil)
       @filename = filename
       @bucket = bucket
       @year = year
       @author = author
       @compress = compress
       @extension = extension
+      @credentials = Credentials.fetch(public_key:, private_key:)
     end
 
     def call
@@ -33,19 +31,13 @@ module Backblaze
 
       bucket_id = ENV[bucket_id_env_key]
       dumpfile = "#{filename}.#{extension}"
-
-      # use tarfile name if set to compress otherwise use existing dump filename
       tarfile = compress? ? "#{filename.split('/').last}.tar.gz" : dumpfile
 
       begin
-        # compress csv file
-        # test.csv    => 387  MB
-        # test.tar.gz => 90   MB
         system("tar -czvf #{tarfile} #{dumpfile}") if compress?
 
-        # move tar file to b2
-        conn = Faraday.new(B2_AUTH_URL) do |conn|
-          conn.request :authorization, :basic, B2_PUBLIC_KEY, B2_PRIVATE_KEY
+        conn = Faraday.new(auth_url) do |conn|
+          conn.request :authorization, :basic, credentials[:public_key], credentials[:private_key]
         end
 
         response = conn.get
@@ -69,7 +61,6 @@ module Backblaze
           end
         end
 
-        # include year as directory for sorting purposes
         upload_filename = compress? ? tarfile : dumpfile.split('/').last
         file_to_upload = "#{year}/#{upload_filename}"
 
@@ -92,22 +83,29 @@ module Backblaze
         end
 
         if response.success?
-          # clean up initial files / DB if desired
           { success: true, msg: "File #{dumpfile.split('/').last} uploaded successfully" }
         else
           { success: false, msg: "Failed to upload #{tarfile}: #{response.body}" }
         end
       ensure
-        # remove generated tarfile
         FileUtils.rm(tarfile) if compress?
       end
     end
 
     private
-    attr_reader :filename, :bucket, :year, :author, :extension
+
+    attr_reader :filename, :bucket, :year, :author, :extension, :credentials
+
+    def auth_url
+      ENV.fetch('B2_AUTH_URL')
+    end
+
+    def known_buckets
+      ENV.fetch('B2_KNOWN_BUCKETS').split(',').map(&:strip)
+    end
 
     def valid_bucket?
-      B2_KNOWN_BUCKETS.include?(bucket)
+      known_buckets.include?(bucket)
     end
 
     def bucket_id_env_key
