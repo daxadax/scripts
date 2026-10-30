@@ -20,10 +20,13 @@ if ! iwctl -p off station "$IF" show 2>/dev/null | grep -q 'Connected network'; 
 elif ! ip -4 addr show dev "$IF" | grep -q 'inet '; then
   systemctl restart iwd
 
-# Case 3 — L2 + L3 OK, path broken: has an IPv4 address but can't reach the internet.
-# Symptoms: inet on wlan0, ping to gateway or 8.8.8.8 fails.
-# Cause: stale route, DNS, AP isolation, gateway issue — usually not a dead radio.
-# Fix: reconnect in place; avoids deauth + full daemon restart unless needed.
-elif ! ping -c1 -W3 8.8.8.8 >/dev/null 2>&1; then
-  iwctl station "$IF" reconnect
+# Case 3 — L2 + L3 OK, path broken: has an IPv4 address but gateway unreachable.
+# Symptoms: inet on wlan0, but ARP/ping to gateway fails (zombie association).
+# Cause: stale route, AP deauth without client notification, wedged driver.
+# Fix: restart iwd so it clears stale state and re-associates cleanly.
+else
+  GATEWAY=$(ip route | awk '/default/ { print $3 }' | head -n1)
+  if [ -z "$GATEWAY" ] || ! ping -c1 -W3 "$GATEWAY" >/dev/null 2>&1; then
+    systemctl restart iwd
+  fi
 fi
