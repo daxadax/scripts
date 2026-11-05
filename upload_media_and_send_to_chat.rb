@@ -14,7 +14,7 @@ require 'net/http'
 require 'optparse'
 require 'uri'
 
-require File.expand_path('../backblaze/upload_media', __dir__)
+require File.expand_path('backblaze/upload_media', __dir__)
 
 VIDEO_EXTENSIONS = %w[.mkv .mp4 .webm .mov].freeze
 
